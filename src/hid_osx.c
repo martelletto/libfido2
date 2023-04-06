@@ -29,6 +29,8 @@
 struct hid_osx {
 	IOHIDDeviceRef	ref;
 	CFStringRef	loop_id;
+	sigset_t	sigmask;
+	const sigset_t *sigmaskp;
 	int		report_pipe[2];
 	size_t		report_in_len;
 	size_t		report_out_len;
@@ -517,17 +519,21 @@ fido_hid_close(void *handle)
 int
 fido_hid_set_sigmask(void *handle, const fido_sigset_t *sigmask)
 {
-	(void)handle;
-	(void)sigmask;
+	struct hid_osx *ctx = handle;
 
-	return (FIDO_ERR_INTERNAL);
+	ctx->sigmask = *sigmask;
+	ctx->sigmaskp = &ctx->sigmask;
+
+	return (FIDO_OK);
 }
 
 int
 fido_hid_read(void *handle, unsigned char *buf, size_t len, int ms)
 {
-	struct hid_osx		*ctx = handle;
-	ssize_t			 r;
+	struct hid_osx	*ctx = handle;
+	sigset_t	 osigmask;
+	sigset_t	*osigmaskp = NULL;
+	ssize_t		 r;
 
 	explicit_bzero(buf, len);
 	explicit_bzero(ctx->report, sizeof(ctx->report));
@@ -537,8 +543,17 @@ fido_hid_read(void *handle, unsigned char *buf, size_t len, int ms)
 		return (-1);
 	}
 
-	IOHIDDeviceScheduleWithRunLoop(ctx->ref, CFRunLoopGetCurrent(),
-	    ctx->loop_id);
+	if (sigprocmask(SIG_SETMASK, NULL, &osigmask) == -1)
+		fido_log_error(errno, "%s: sigprocmask", __func__);
+	else
+		osigmaskp = &osigmask;
+
+	CFRunLoopPerformBlock(CFRunLoopGetCurrent(), ctx->loop_id, ^{
+		if (sigprocmask(SIG_SETMASK, ctx->sigmaskp, NULL) == -1)
+			fido_log_error(errno, "%s: sigprocmask", __func__);
+		IOHIDDeviceScheduleWithRunLoop(ctx->ref, CFRunLoopGetCurrent(),
+		    ctx->loop_id);
+	});
 
 	if (ms == -1)
 		ms = 5000; /* wait 5 seconds by default */
@@ -547,6 +562,9 @@ fido_hid_read(void *handle, unsigned char *buf, size_t len, int ms)
 
 	IOHIDDeviceUnscheduleFromRunLoop(ctx->ref, CFRunLoopGetCurrent(),
 	    ctx->loop_id);
+
+	if (sigprocmask(SIG_SETMASK, osigmaskp, NULL) == -1)
+		fido_log_error(errno, "%s: sigprocmask", __func__);
 
 	if ((r = read(ctx->report_pipe[0], buf, len)) == -1) {
 		fido_log_error(errno, "%s: read", __func__);
