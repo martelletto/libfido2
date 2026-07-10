@@ -307,6 +307,7 @@ else()
 	add_compile_options(-Wmissing-prototypes)
 	add_compile_options(-Wbad-function-cast)
 	add_compile_options(-Wimplicit-fallthrough)
+	add_compile_options(-Wformat-nonliteral)
 	add_compile_options(-pedantic)
 	add_compile_options(-pedantic-errors)
 
