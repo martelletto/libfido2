@@ -743,6 +743,7 @@ __wrap_deflate(z_streamp strm, int flush)
 }
 
 int __wrap_asprintf(char **, const char *, ...);
+    __attribute__((__format__ (printf, 2, 3)));
 
 int
 __wrap_asprintf(char **strp, const char *fmt, ...)
