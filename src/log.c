@@ -24,6 +24,10 @@
 
 static TLS int logging;
 static TLS fido_log_handler_t *log_handler;
+#ifdef __GNUC__
+static void do_log(const char *, const char *, va_list)
+    __attribute__((__format__ (printf, 2, 0)));
+#endif
 
 static void
 log_on_stderr(const char *str)
