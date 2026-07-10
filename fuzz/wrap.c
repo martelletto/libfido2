@@ -742,7 +742,7 @@ __wrap_deflate(z_streamp strm, int flush)
 	return __real_deflate(strm, flush);
 }
 
-int __wrap_asprintf(char **, const char *, ...);
+int __wrap_asprintf(char **, const char *, ...)
     __attribute__((__format__ (printf, 2, 3)));
 
 int
