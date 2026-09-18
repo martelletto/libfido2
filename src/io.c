@@ -269,7 +269,7 @@ rx(fido_dev_t *d, uint8_t cmd, unsigned char *buf, size_t count, int *ms)
 	 * aligning with BLE framing, Chromium implementation, and emerging
 	 * consensus in FIDO to allow wrapping of the sequence number.
 	 */
-	for (int seq = 0; r < payload_len; seq = (seq + 1) % 128) {
+	for (uint8_t seq = 0; r < payload_len; seq = (seq + 1) % 128) {
 		if (rx_frame(d, &f, ms) < 0) {
 			fido_log_debug("%s: rx_frame", __func__);
 			return (-1);
